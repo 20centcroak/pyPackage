@@ -1,0 +1,2 @@
+# pyPackage
+Wrapper for pyInstaller
