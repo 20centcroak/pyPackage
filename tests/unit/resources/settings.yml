@@ -1,0 +1,3 @@
+name: myApp
+package: tests/unit/myapp.py
+distpath: tests/output/myApp

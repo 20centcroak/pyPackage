@@ -1,0 +1,16 @@
+name: myApp2
+version: 1.0
+package: tests/unit/myapp2.py
+distpath: tests/output/
+#onefile: true
+data: 
+  - src: tests/unit/resources/myapp2_settings.yml
+    root_level: true
+    rename: settings.yml
+  - src: tests/unit/resources/logo.jpg
+    dst: images
+    root_level: true
+bat:
+    options:
+        l: logs
+        s: settings.yml
