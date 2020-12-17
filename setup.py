@@ -4,11 +4,11 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="pyPackage", 
+    name="pyInstallPackage", 
     version="0.1",
     author="20centCroak",
     author_email="",
-    description="Standard app configuration and packaging",
+    description="Standard app packaging",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/20centcroak/pyPackage",
