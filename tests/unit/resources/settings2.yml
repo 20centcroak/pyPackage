@@ -2,7 +2,7 @@ name: myApp2
 version: 1.0
 package: tests/unit/myapp2.py
 distpath: tests/output/
-#onefile: true
+# onefile: true
 data: 
   - src: tests/unit/resources/myapp2_settings.yml
     root_level: true

@@ -5,7 +5,7 @@ import distutils.file_util as fileutil
 import distutils.dir_util as dirutil
 from distutils.dist import DistutilsError
 import logging
-import re
+from pathlib import Path
 
 
 class Package:
@@ -13,14 +13,14 @@ class Package:
     def __init__(self, options: Options, data=None, example_folder=None, doc_folder=None):
         command = []
         version = options.version if options.version else 0.0
-        modulename, _ = os.path.splitext(options.package)
-        name = os.path.basename(modulename) 
-        root_path = '/dist/{}_{}'.format(name,version)
+        modulename = Path(options.package).stem
+        name = Path(modulename).name
+        root_path = Path('.').joinpath('dist', '{}_{}'.format(name,version))
 
         if options.name:
             command.append('--name={}'.format(options.name))
             name = options.name
-            root_path = '/dist/{}_{}'.format(name,version)
+            root_path = Path('.').joinpath('dist', '{}_{}'.format(name,version))
         if options.onefile:
             command.append('--onefile')
         if options.no_confirm:
@@ -32,7 +32,7 @@ class Package:
         if options.icon:
             command.append('--icon={}'.format(options.icon))
         if options.distpath:
-            root_path = '{}/{}_{}'.format(options.distpath, name, version)
+            root_path = Path('.').joinpath(options.distpath, '{}_{}'.format(name,version))
             command.append('--distpath={}'.format(root_path))
         if options.workpath:
             command.append('--workpath={}'.format(options.workpath))
@@ -57,8 +57,7 @@ class Package:
                 command.append('--exclude-module={}'.format(module))
         if options.binaries:
             for src in options.binaries:
-                command.append('--add-binary={}{}{}'.format(src,
-                                                            os.path.pathsep, options.binaries[src]))
+                command.append('--add-binary=Path(src) / options.binaries[src]')
    
         command.append(options.package)
 
@@ -68,38 +67,38 @@ class Package:
             self._copyFilesAndFolders(data, root_path, name)
 
         if options.bat:
-            self._createbat(root_path, name, options.bat)
+            self._createbat(root_path, name, options.bat, options.onefile)
 
         if options.sh:
-            self._createsh(root_path, name, options.sh)
+            self._createsh(root_path, name, options.sh, options.onefile)
 
     def _package(self, command):
         PyInstaller.__main__.run(command)
 
-    def _createbat(self, path, name, parameters):
-        file = os.path.join(path, name+'.bat')
-        path = parameters['path'] if 'path' in parameters else name
+    def _createbat(self, root_path, name, parameters, onefile):
+        file = root_path / (name+'.bat')
+        target = name+'.exe' if onefile else Path(name) / (name+'.exe')
         with open(file, 'w') as f:
-            f.write(os.path.join(path, name+'.exe '))
+            f.write(str(target))
             for key, value in parameters['options'].items():
-                f.write('-{} {} '.format(key, value))
+                f.write(' -{} {}'.format(key, value))
             f.write('\nPAUSE')
 
-    def _createsh(self, path, name, parameters):
-        file = os.path.join(path, name+'.sh')
-        target = '{0}/{1}/{1} '.format(parameters['path'], name)
+    def _createsh(self, root_path, name, parameters, onefile):
+        file = root_path / (name+'.sh')
+        target = name if onefile else Path(name) / name
         with open(file, 'w') as f:
-            f.write(target)            
+            f.write(str(target))
             for key, value in parameters['options'].items():
-                f.write('-{} {} '.format(key, value))
+                f.write(' -{} {}'.format(key, value))
 
     def _copyFilesAndFolders(self, data, root_path, name):
         for dataobj in data:
             src = dataobj['src']
-            dest = dataobj['dst'] if 'dst' in dataobj else ''
-            root_level = dataobj['root_level']
-            dest = os.path.join(root_path, dest) if root_level else os.path.join(root_path, name, dest)
-            self._copyFolder(src, dest) if os.path.isdir(src) else self._copyFile(src, dest, dataobj)
+            dest = dataobj.get('dst','')
+            root_level = dataobj.get('root_level', False)
+            dest = root_path / dest if root_level else root_path / name / dest
+            self._copyFolder(src, src(dest)) if Path(src).is_dir() else self._copyFile(src, dest, dataobj)
 
     def _copyFolder(self, src, dest):
         if not src:
@@ -108,15 +107,16 @@ class Package:
             dirutil.copy_tree(src, dest)
             return dest
         except DistutilsError:
-            logging.warning("can't copy {} from {}".format(dest, src))
+            logging.error("can't copy {} from {}".format(dest, src))
 
     def _copyFile(self, src, dest, dataobj):
         if not src:
             return
         try:
-            target_file = os.path.join(dest, dataobj['rename']) if 'rename' in dataobj else os.path.join(dest, os.path.basename(src))
-            os.makedirs(os.path.dirname(target_file), exist_ok=True)
-            fileutil.copy_file(src, target_file)
+            target_file = dest / dataobj['rename'] if 'rename' in dataobj else dest / Path(src).name
+            os.makedirs(Path(target_file).parent, exist_ok=True)
+            fileutil.copy_file(src, str(target_file))
             return target_file
         except DistutilsError:
-            logging.warning("can't copy {} from {}".format(dest, src))
+            logging.error("can't copy {} from {}".format(dest, src))
+
